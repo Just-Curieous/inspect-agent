@@ -4,7 +4,26 @@
 
 # Print commands and their arguments as they are executed
 set -x
+# bash start.sh /all/home/ubuntu/Benchmark-Construction/logs/neurips2024/MoE-Jetpack /all/home/ubuntu/Benchmark-Construction/logs/neurips2024/95262.json
+
 source env.sh
+
+# move the original code directory '$2' to /home/code
+if [ -d "$1" ]; then
+  cp "$1" /home/code/
+else
+  echo "Error: Directory '$1' does not exist."
+  exit 1
+fi
+# move the original paper file '$2' to paper
+if [ -f "$2" ]; then
+  cp "$2" /home/paper/
+else
+  echo "Error: File '$2' does not exist."
+  exit 1
+fi
+
+cp instructions.txt /home/paper/
 
 # Test Docker-in-Docker functionality
 if [ -x "$(command -v docker)" ]; then
@@ -17,7 +36,7 @@ if [ -x "$(command -v docker)" ]; then
   # docker ps -a
 fi 2>&1 | tee $LOGS_DIR/docker.log
 
-{
+{  
   conda run -n agent --no-capture-output python start.py
 
   # Move agent logs to $LOGS_DIR/ directory

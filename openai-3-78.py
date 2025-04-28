@@ -136,8 +136,8 @@ class OpenAIAPI(ModelAPI):
                 os.environ.get("OPENAI_API_VERSION", "2025-02-01-preview"),
             )
 
-            # self.client: AsyncAzureOpenAI | AsyncOpenAI = AsyncAzureOpenAI(
-            self.client: AzureOpenAI | AsyncOpenAI = AzureOpenAI(
+            # self.client: AzureOpenAI | AsyncOpenAI = AzureOpenAI(
+            self.client: AsyncAzureOpenAI | AsyncOpenAI = AsyncAzureOpenAI(
                 api_key=self.api_key,
                 organization=os.environ.get("ORGANIZATION"),
                 api_version=api_version,
@@ -148,6 +148,7 @@ class OpenAIAPI(ModelAPI):
         else:
             self.client = AsyncOpenAI(
                 api_key=self.api_key,
+                organization=os.environ.get("ORGANIZATION"),
                 base_url=model_base_url(base_url, "OPENAI_BASE_URL"),
                 http_client=http_client,
                 **model_args,
