@@ -1,5 +1,7 @@
 ## Docker and Installation 
 ```bash
+git clone https://github.com/Just-Curieous/inspect-agent.git
+cd inspect-agent/
 docker build --platform=linux/amd64 -t pb-env -f Dockerfile.base .
 ```
 
