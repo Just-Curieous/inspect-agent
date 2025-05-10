@@ -57,10 +57,7 @@ CONTINUE_USER_MESSAGE_CODE_ONLY = """Now given the previous progress made by the
 - Use the available tools to write the necessary code.
 - Remember, you should try prioritize the most important parts of the paper to replicate first."""
 
-# Global counters for accumulated tokens
-ACCUMULATED_INPUT_TOKENS = 0
-ACCUMULATED_OUTPUT_TOKENS = 0 
-
+    
 class BasicAgentDeprecatedArgs(TypedDict, total=False):
     max_messages: int | None
 
@@ -80,61 +77,57 @@ def count_claude_tokens(state):
     # Initialize counters
     input_tokens = 0
     output_tokens = 0
-    
     # Process input messages
-    for m in state.messages:
-        if not hasattr(m, 'content'):
-            continue
-            
-        # Handle different content types
-        if isinstance(m.content, str):
-            content_str = m.content
-        elif isinstance(m.content, list):
-            # For content that is a list of parts
-            parts = []
-            for part in m.content:
-                if isinstance(part, str):
-                    parts.append(part)
-                elif isinstance(part, dict) and 'text' in part:
-                    parts.append(part['text'])
-                else:
-                    parts.append(str(part))
-            content_str = "".join(parts)
-        else:
-            # For any other type
-            content_str = str(m.content)
-            
-        # Count input tokens
-        input_tokens += len(encoding.encode(content_str))
-    
-    # Process output message
-    if hasattr(state, 'output') and hasattr(state.output, 'message') and hasattr(state.output.message, 'content'):
-        output_content = state.output.message.content
+    try:
+        for m in state.messages:
+            if not hasattr(m, 'content'):
+                continue
+                
+            # Handle different content types
+            if isinstance(m.content, str):
+                content_str = m.content
+            elif isinstance(m.content, list):
+                # For content that is a list of parts
+                parts = []
+                for part in m.content:
+                    if isinstance(part, str):
+                        parts.append(part)
+                    elif isinstance(part, dict) and 'text' in part:
+                        parts.append(part['text'])
+                    else:
+                        parts.append(str(part))
+                content_str = "".join(parts)
+            else:
+                # For any other type
+                content_str = str(m.content)
+                
+            # Count input tokens
+            input_tokens += len(encoding.encode(content_str))
         
-        # Handle different content types for output
-        if isinstance(output_content, str):
-            output_content_str = output_content
-        elif isinstance(output_content, list):
-            parts = []
-            for part in output_content:
-                if isinstance(part, str):
-                    parts.append(part)
-                elif isinstance(part, dict) and 'text' in part:
-                    parts.append(part['text'])
-                else:
-                    parts.append(str(part))
-            output_content_str = "".join(parts)
-        else:
-            output_content_str = str(output_content)
-            
-        # Count output tokens
-        output_tokens += len(encoding.encode(output_content_str))
-    
+        # Process output message
+        if hasattr(state, 'output') and hasattr(state.output, 'message') and hasattr(state.output.message, 'content'):
+            output_content = state.output.message.content
+            # Handle different content types for output
+            if isinstance(output_content, str):
+                output_content_str = output_content
+            elif isinstance(output_content, list):
+                parts = []
+                for part in output_content:
+                    if isinstance(part, str):
+                        parts.append(part)
+                    elif isinstance(part, dict):
+                        parts.append(part.text)
+                    else:
+                        parts.append(str(part))
+                output_content_str = "".join(parts)
+            else:
+                output_content_str = str(output_content)
+                
+            output_tokens += len(encoding.encode(output_content_str))
+        logger.warning(f"Accumulated tokens: input={input_tokens}, output={output_tokens}, total={ACCUMULATED_INPUT_TOKENS + ACCUMULATED_OUTPUT_TOKENS}")
+    except Exception as e:
+        logger.warning(f"Error counting tokens: {e}")
     return input_tokens, output_tokens
-
-# Example usage:
-# input_tokens, output_tokens = count_claude_tokens(state)
-# print(f"Input tokens: {input_tokens}, Output tokens: {output_tokens}")
 
 @solver
 def basic_agent_iterative(
@@ -360,12 +353,9 @@ def basic_agent_iterative(
                 # no tool calls, urge the model to continue
                 else:
                     state.messages.append(ChatMessageUser(content=continue_message))
-                global ACCUMULATED_INPUT_TOKENS, ACCUMULATED_OUTPUT_TOKENS
-                encoding = tiktoken.encoding_for_model("gpt-4o")
-                input_tokens, output_tokens = count_claude_tokens(state)
-                ACCUMULATED_INPUT_TOKENS += input_tokens
-                ACCUMULATED_OUTPUT_TOKENS += output_tokens
-                logger.warning(f"Accumulated tokens: input={ACCUMULATED_INPUT_TOKENS}, output={ACCUMULATED_OUTPUT_TOKENS}, total={ACCUMULATED_INPUT_TOKENS + ACCUMULATED_OUTPUT_TOKENS}")
+
+                count_claude_tokens(state)
+
             return state
 
         return solve
