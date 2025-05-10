@@ -14,10 +14,10 @@ docker build --platform=linux/amd64 -t pb-env -f Dockerfile.base .
 0. Build the docker.
 1. Copy `env.sh.example` to `env.sh`. 
 2. Replace your system prompt under `instructions.txt`  
-3. Run Inspect AI Agent with your code base and questions: `python entry_point.py --json_path <path_to_research_paper>  --code_repo_path <path_to_code_repo> --inspect_path $(PWD)
+3. Run Inspect AI Agent with your code base and questions: `python entry_point.py --research_task <path_to_research_paper>  --code_repo_path <path_to_code_repo> --inspect_path $(PWD)`
    For example: 
 ```bash
-python entry_point.py --json_path /home/ubuntu/Benchmark-Construction/logs/neurips2024/95262.json --code_repo_path /home/ubuntu/Benchmark-Construction/logs/neurips2024/MoE-Jetpack --inspect_path /home/ubuntu/inspect-agent
+python entry_point.py --research_task /home/ubuntu/Benchmark-Construction/logs/neurips2024/95262.json --code_repo_path /home/ubuntu/Benchmark-Construction/logs/neurips2024/MoE-Jetpack --inspect_path /home/ubuntu/inspect-agent
 ```
 
 ## Manual Setup
