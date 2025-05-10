@@ -65,7 +65,7 @@ def run_docker_command(json_path, code_repo_path, inspect_path=None):
 def main():
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Run start.sh script inside Docker container with specified paths.")
-    parser.add_argument("--json_path", required=True, help="Path to the JSON file")
+    parser.add_argument("--research_task", required=True, help="Path to the JSON file")
     parser.add_argument("--code_repo_path", help="Path to the code repository")
     parser.add_argument("--inspect_path", required=True, help="Path to the inspect file")
     parser.add_argument("--remove-container", action="store_true", help="Remove the container after execution")
@@ -74,7 +74,7 @@ def main():
     args = parser.parse_args()
     
     # Run the Docker command
-    return_code = run_docker_command(args.json_path, args.code_repo_path, args.inspect_path)
+    return_code = run_docker_command(args.research_task, args.code_repo_path, args.inspect_path)
     
     sys.exit(return_code)
 
