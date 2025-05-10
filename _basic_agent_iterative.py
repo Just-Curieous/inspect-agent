@@ -2,10 +2,10 @@ import asyncio
 import copy
 import os
 import time
-from json import JSONDecodeError
+from json.decoder import JSONDecodeError
 from logging import getLogger
 from typing import Callable, cast
-
+import tiktoken
 from inspect_ai._util.format import format_progress_time
 from inspect_ai.model import GenerateConfig
 from inspect_ai.model._cache import CachePolicy
@@ -57,10 +57,84 @@ CONTINUE_USER_MESSAGE_CODE_ONLY = """Now given the previous progress made by the
 - Use the available tools to write the necessary code.
 - Remember, you should try prioritize the most important parts of the paper to replicate first."""
 
+# Global counters for accumulated tokens
+ACCUMULATED_INPUT_TOKENS = 0
+ACCUMULATED_OUTPUT_TOKENS = 0 
 
 class BasicAgentDeprecatedArgs(TypedDict, total=False):
     max_messages: int | None
 
+def count_claude_tokens(state):
+    """
+    Count input and output tokens for Claude 3.7 from a state object.
+    
+    Args:
+        state: Object containing messages and output
+        
+    Returns:
+        tuple: (input_tokens, output_tokens)
+    """
+    # Get Claude encoding
+    encoding = tiktoken.get_encoding("cl100k_base")
+    
+    # Initialize counters
+    input_tokens = 0
+    output_tokens = 0
+    
+    # Process input messages
+    for m in state.messages:
+        if not hasattr(m, 'content'):
+            continue
+            
+        # Handle different content types
+        if isinstance(m.content, str):
+            content_str = m.content
+        elif isinstance(m.content, list):
+            # For content that is a list of parts
+            parts = []
+            for part in m.content:
+                if isinstance(part, str):
+                    parts.append(part)
+                elif isinstance(part, dict) and 'text' in part:
+                    parts.append(part['text'])
+                else:
+                    parts.append(str(part))
+            content_str = "".join(parts)
+        else:
+            # For any other type
+            content_str = str(m.content)
+            
+        # Count input tokens
+        input_tokens += len(encoding.encode(content_str))
+    
+    # Process output message
+    if hasattr(state, 'output') and hasattr(state.output, 'message') and hasattr(state.output.message, 'content'):
+        output_content = state.output.message.content
+        
+        # Handle different content types for output
+        if isinstance(output_content, str):
+            output_content_str = output_content
+        elif isinstance(output_content, list):
+            parts = []
+            for part in output_content:
+                if isinstance(part, str):
+                    parts.append(part)
+                elif isinstance(part, dict) and 'text' in part:
+                    parts.append(part['text'])
+                else:
+                    parts.append(str(part))
+            output_content_str = "".join(parts)
+        else:
+            output_content_str = str(output_content)
+            
+        # Count output tokens
+        output_tokens += len(encoding.encode(output_content_str))
+    
+    return input_tokens, output_tokens
+
+# Example usage:
+# input_tokens, output_tokens = count_claude_tokens(state)
+# print(f"Input tokens: {input_tokens}, Output tokens: {output_tokens}")
 
 @solver
 def basic_agent_iterative(
@@ -141,7 +215,6 @@ def basic_agent_iterative(
 
     # resolve score_value function
     score_value_fn = score_value or value_to_float()
-
     # submission tool
     @tool
     def end_task() -> Tool:
@@ -203,7 +276,6 @@ def basic_agent_iterative(
                 logger.warning(
                     f"total runtime: {round(time.time() - start_time, 2)}, total productive runtime: {round(time.time() - start_time - model.total_retry_time, 2)}, total retry time: {round(model.total_retry_time, 2)}"
                 )
-
                 over_time_limit = (
                     (time.time() - start_time - model.total_retry_time > real_time_limit)
                     if real_time_limit is not None
@@ -288,7 +360,12 @@ def basic_agent_iterative(
                 # no tool calls, urge the model to continue
                 else:
                     state.messages.append(ChatMessageUser(content=continue_message))
-
+                global ACCUMULATED_INPUT_TOKENS, ACCUMULATED_OUTPUT_TOKENS
+                encoding = tiktoken.encoding_for_model("gpt-4o")
+                input_tokens, output_tokens = count_claude_tokens(state)
+                ACCUMULATED_INPUT_TOKENS += input_tokens
+                ACCUMULATED_OUTPUT_TOKENS += output_tokens
+                logger.warning(f"Accumulated tokens: input={ACCUMULATED_INPUT_TOKENS}, output={ACCUMULATED_OUTPUT_TOKENS}, total={ACCUMULATED_INPUT_TOKENS + ACCUMULATED_OUTPUT_TOKENS}")
             return state
 
         return solve
@@ -300,4 +377,4 @@ def basic_agent_iterative(
             tools,
             basic_agent_loop(),
         ]
-    )
+    ) 
