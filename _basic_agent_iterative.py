@@ -124,7 +124,7 @@ def count_claude_tokens(state):
                 output_content_str = str(output_content)
                 
             output_tokens += len(encoding.encode(output_content_str))
-        logger.warning(f"Accumulated tokens: input={input_tokens}, output={output_tokens}, total={ACCUMULATED_INPUT_TOKENS + ACCUMULATED_OUTPUT_TOKENS}")
+        logger.warning(f"Accumulated tokens: input={input_tokens}, output={output_tokens}, total={input_tokens + output_tokens}")
     except Exception as e:
         logger.warning(f"Error counting tokens: {e}")
     return input_tokens, output_tokens
